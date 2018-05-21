@@ -57,7 +57,8 @@ def generate_samples(xpaths, ypaths, batch_size):
                 ydata.append(process_label(yimg))
                 xdata.append(ximg)
         
-            xdata = np.array(xdata)
+            xdata = np.array(xdata).astype("float")
+	    xdata = xdata/255. - 0.5
             ydata = np.array(ydata).reshape( (batch_size, 600*800, 3))
             #print(xdata.shape)
 #             print(ydata.shape)
@@ -129,7 +130,7 @@ def run():
     train_gen = generate_samples(xtrain, ytrain, batch_size=batch_size)
     test_gen = generate_samples(xtest, ytest, batch_size=batch_size)
     
-    imgsize = (600, 800, 3)
+    imgsize = (600, 800, 4)
     model = segnet(3, imgsize)
     print(len(xtrain))
     runobj = model.fit_generator(train_gen,
