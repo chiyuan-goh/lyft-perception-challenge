@@ -13,7 +13,7 @@ from keras.layers.core import Reshape
 from sklearn.utils import shuffle
 from sklearn.model_selection import train_test_split
 
-burl = '/ext/data/lyft-challenge/Train'
+burl = '/Users/chiyuan/Documents/home/Train'
 img_url = os.path.join(burl, "CameraRGB")
 label_url = os.path.join(burl, "CameraSeg")
 
@@ -38,12 +38,16 @@ def process_label(yimg):
         
     return cls_img
 
-def generate_samples(xpaths, ypaths, batch_size):
+def generate_samples(xpaths, ypaths, batch_size, train=False):
     batch_size = batch_size
+
+    #cars, road, none
+    cweights = [14.259816, 1., 0.25325792]
 
     while 1:
         xpaths, ypaths = shuffle(xpaths, ypaths)
         nbatches =  len(xpaths) // batch_size
+        sample_weights = []
         
         for i in range(nbatches):
             xs = xpaths[i * batch_size: i*batch_size + batch_size]
@@ -58,6 +62,17 @@ def generate_samples(xpaths, ypaths, batch_size):
                 ydata.append(process_label(yimg))
                 xdata.append(ximg)
 
+                if train:
+                    sample_weight = np.zeros( (ximg.shape[0], ximg.shape[1]) )
+                    car_indices = np.where(ydata[-1][:, :, 0] == 1)
+                    road_indices = np.where(ydata[-1][:, :, 1] == 1)
+                    others_indices = np.where(ydata[-1][:,:,2] == 1)
+                    sample_weight[car_indices] = cweights[0]
+                    sample_weight[road_indices] = cweights[1]
+                    sample_weight[others_indices] = cweights[2]
+                    sample_weight = sample_weight.reshape( (batch_size+1, 600*800))
+                    sample_weights.append(sample_weights)
+
 
             #reflect 1
             ridx = np.random.choice(range(batch_size))
@@ -69,7 +84,12 @@ def generate_samples(xpaths, ypaths, batch_size):
             xdata = np.array(xdata).astype("float")
             xdata = xdata/255. - 0.5
             ydata = np.array(ydata).reshape( (batch_size+1, 600*800, 3))
-            yield xdata, ydata
+            
+            if not train:
+                yield xdata, ydata
+            else:
+                yield xdata, ydata, sample_we
+
 
 def segnet(num_classes, img_shape):
     model = Sequential()
@@ -134,7 +154,7 @@ def run():
     ylabel = os.listdir(label_url)
     
     xtrain, xtest, ytrain, ytest = train_test_split(xdata, ylabel, test_size=0.2)
-    train_gen = generate_samples(xtrain, ytrain, batch_size=batch_size)
+    train_gen = generate_samples(xtrain, ytrain, batch_size=batch_size, train=True)
     test_gen = generate_samples(xtest, ytest, batch_size=batch_size)
     
     imgsize = (600, 800, 3)
