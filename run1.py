@@ -31,7 +31,8 @@ model = load_model("m1")
 
 for rgb_frame in video:
     cv2_frame = cv2.cvtColor(rgb_frame, cv2.COLOR_RGB2BGR)
-    cv2_frame = cv2_frame.reshape((1,600, 800, 3))
+    cv2_frame = cv2_frame.reshape((1,600, 800, 3)).astype('float')
+    cv2_frame = cv2_frame / 255. - .5
     prediction = model.predict(cv2_frame)
 
     prediction = prediction.argmax(axis=2).reshape((600, 800))
