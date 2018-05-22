@@ -13,7 +13,7 @@ from keras.layers.core import Reshape
 from sklearn.utils import shuffle
 from sklearn.model_selection import train_test_split
 
-burl = '/Users/chiyuan/Documents/home/Train'
+burl = '/ext/data/lyft/Train'
 img_url = os.path.join(burl, "CameraRGB")
 label_url = os.path.join(burl, "CameraSeg")
 
@@ -47,9 +47,10 @@ def generate_samples(xpaths, ypaths, batch_size, train=False):
     while 1:
         xpaths, ypaths = shuffle(xpaths, ypaths)
         nbatches =  len(xpaths) // batch_size
-        sample_weights = []
         
         for i in range(nbatches):
+            sample_weights = []
+            
             xs = xpaths[i * batch_size: i*batch_size + batch_size]
             ys = ypaths[i * batch_size: i*batch_size + batch_size]
             
@@ -67,11 +68,11 @@ def generate_samples(xpaths, ypaths, batch_size, train=False):
                     car_indices = np.where(ydata[-1][:, :, 0] == 1)
                     road_indices = np.where(ydata[-1][:, :, 1] == 1)
                     others_indices = np.where(ydata[-1][:,:,2] == 1)
-                    sample_weight[car_indices] = cweights[0]
-                    sample_weight[road_indices] = cweights[1]
-                    sample_weight[others_indices] = cweights[2]
-                    sample_weight = sample_weight.reshape( (batch_size+1, 600*800))
-                    sample_weights.append(sample_weights)
+                    sample_weight[car_indices] = 5.
+                    sample_weight[road_indices] = 1.
+                    sample_weight[others_indices] = .25
+                    sample_weight = sample_weight.reshape(600*800)
+                    sample_weights.append(sample_weight)
 
 
             #reflect 1
@@ -80,6 +81,16 @@ def generate_samples(xpaths, ypaths, batch_size, train=False):
             reflect_label = cv2.flip(ydata[ridx], 1)
             xdata.append(reflect_img)
             ydata.append(reflect_label)
+            
+            sample_weight = np.zeros( (reflect_img.shape[0], reflect_img.shape[1]) )
+            car_indices = np.where(ydata[-1][:, :, 0] == 1)
+            road_indices = np.where(ydata[-1][:, :, 1] == 1)
+            others_indices = np.where(ydata[-1][:,:,2] == 1)
+            sample_weight[car_indices] = 5.
+            sample_weight[road_indices] = 1.
+            sample_weight[others_indices] = .25
+            sample_weight = sample_weight.reshape(600*800)
+            sample_weights.append(sample_weight)
 
             xdata = np.array(xdata).astype("float")
             xdata = xdata/255. - 0.5
@@ -88,7 +99,8 @@ def generate_samples(xpaths, ypaths, batch_size, train=False):
             if not train:
                 yield xdata, ydata
             else:
-                yield xdata, ydata, sample_we
+                #print(ydata.shape[:sample_weight.ndim], np.array(sample_weights).shape )
+                yield xdata, ydata, np.array(sample_weights)
 
 
 def segnet(num_classes, img_shape):
@@ -142,7 +154,7 @@ def segnet(num_classes, img_shape):
 #     prediction layer
     model.add(Activation("softmax"))
     
-    model.compile('adam', 'categorical_crossentropy', metrics=['accuracy'])
+    model.compile('adam', 'categorical_crossentropy', metrics=['accuracy'], sample_weight_mode="temporal")
     
     return model
 
@@ -159,12 +171,15 @@ def run():
     
     imgsize = (600, 800, 3)
     model = segnet(3, imgsize)
-    print(len(xtrain))
+    #print(len(xtrain))
     runobj = model.fit_generator(train_gen,
-                                samples_per_epoch= len(xtrain)//batch_size * batch_size,
-                                nb_epoch=4,
+                                samples_per_epoch= len(xtrain)//batch_size * batch_size * 1.25,
+                                nb_epoch=7,
                                 validation_data=test_gen, 
                                 nb_val_samples = (len(xtest)//batch_size) * batch_size,
                                 verbose=1)
         
-    model.save("m1")
+    model.save("m2")
+    
+if __name__ == '__main__':
+    run()

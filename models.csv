@@ -2,3 +2,4 @@ experiment,results,commit,actual,,,,
 4 layer segnet 3 epoch,~0.88,3821b905a011a43,40.557,,0.1035,0.7668,7.042
 4 layer segnet 4 epoch /255 - .5,~0.93,eb3878337f,50.5806,0.5387,0.1877,0.8897,6.711
 4 layer segnet 4 epoch /255 - .5 add 1 reflect a-axis,~0.96,322528c14,51.8384,0.5504,0.1578,0.9429,6.802
+4 layer segnet 7 epoch /255 - .5 add 1 reflect a-axis cls weights, ~0.9191,3228eae88,58.6642,0.6195,0.3485,0.8906,6.711
