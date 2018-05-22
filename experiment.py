@@ -39,6 +39,8 @@ def process_label(yimg):
     return cls_img
 
 def generate_samples(xpaths, ypaths, batch_size):
+    batch_size = batch_size
+
     while 1:
         xpaths, ypaths = shuffle(xpaths, ypaths)
         nbatches =  len(xpaths) // batch_size
@@ -55,10 +57,18 @@ def generate_samples(xpaths, ypaths, batch_size):
                 
                 ydata.append(process_label(yimg))
                 xdata.append(ximg)
-        
+
+
+            #reflect 1
+            ridx = np.random.choice(range(batch_size))
+            reflect_img = cv2.flip(xdata[ridx], 1)
+            reflect_label = cv2.flip(ydata[ridx], 1)
+            xdata.append(reflect_img)
+            ydata.append(reflect_label)
+
             xdata = np.array(xdata).astype("float")
             xdata = xdata/255. - 0.5
-            ydata = np.array(ydata).reshape( (batch_size, 600*800, 3))
+            ydata = np.array(ydata).reshape( (batch_size+1, 600*800, 3))
             yield xdata, ydata
 
 def segnet(num_classes, img_shape):
