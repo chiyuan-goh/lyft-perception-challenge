@@ -4,7 +4,7 @@ import os
 import matplotlib.pyplot as plt
 
 from keras.models import Sequential, load_model
-from keras.layers.convolutional import Conv2D, Deconvolution2D
+from keras.layers.convolutional import Conv2D, Deconvolution2D, UpSampling2D
 from keras.layers.pooling import MaxPooling2D
 from keras.layers import Activation
 from keras.activations import softmax
@@ -13,7 +13,7 @@ from keras.layers.core import Reshape
 from sklearn.utils import shuffle
 from sklearn.model_selection import train_test_split
 
-burl = '/ext/data/lyft/Train'
+burl = '/ext/data/lyft-challenge/Train'
 img_url = os.path.join(burl, "CameraRGB")
 label_url = os.path.join(burl, "CameraSeg")
 
@@ -123,38 +123,51 @@ def segnet(num_classes, img_shape):
     
     model.add(Conv2D(num_features, nb_row=7, nb_col=7, subsample=(1,1), activation='relu', border_mode='same'))
     model.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2), border_mode='same'))
-    
+
     #decoders
-    model.add(Deconvolution2D(num_features, nb_row=8, nb_col=8, 
-              subsample=(2,2), 
-              border_mode='same',
-              output_shape=(None, img_shape[0]//(2**3), img_shape[1]//(2**3), num_features),
-              activation='relu'))
-    
-    model.add(Deconvolution2D(num_features, nb_row=8, nb_col=8, 
-          subsample=(2,2), 
-          border_mode='same',
-          output_shape=(None, img_shape[0]//(2**2), img_shape[1]//(2**2), num_features),
-          activation='relu'))
-    
-    model.add(Deconvolution2D(num_features, nb_row=8, nb_col=8, 
-          subsample=(2,2), 
-          border_mode='same',
-          output_shape=(None, img_shape[0]//(2**1), img_shape[1]//(2**1), num_features),
-          activation='relu'))
-    
-    model.add(Deconvolution2D(num_classes, nb_row=8, nb_col=8, 
-          subsample=(2,2), 
-          border_mode='same',
-          output_shape=(None, img_shape[0], img_shape[1], num_classes),
-          activation='relu'))
+    model.add(UpSampling2D(2,2))
+    model.add(Conv2D(num_features, nb_row=7, nb_col=7, subsample=(1,1), activation='relu', border='same'))
+
+    model.add(UpSampling2D(2, 2))
+    model.add(Conv2D(num_features, nb_row=7, nb_col=7, subsample=(1, 1), activation='relu', border='same'))
+
+    model.add(UpSampling2D(2, 2))
+    model.add(Conv2D(num_features, nb_row=7, nb_col=7, subsample=(1, 1), activation='relu', border='same'))
+
+    model.add(UpSampling2D(2, 2))
+    model.add(Conv2D(num_classes, nb_row=7, nb_col=7, subsample=(1, 1), activation='relu', border='same'))
+
+    #decoders
+    # model.add(Deconvolution2D(num_features, nb_row=8, nb_col=8,
+    #           subsample=(2,2),
+    #           border_mode='same',
+    #           output_shape=(None, img_shape[0]//(2**3), img_shape[1]//(2**3), num_features),
+    #           activation='relu'))
+    #
+    # model.add(Deconvolution2D(num_features, nb_row=8, nb_col=8,
+    #       subsample=(2,2),
+    #       border_mode='same',
+    #       output_shape=(None, img_shape[0]//(2**2), img_shape[1]//(2**2), num_features),
+    #       activation='relu'))
+    #
+    # model.add(Deconvolution2D(num_features, nb_row=8, nb_col=8,
+    #       subsample=(2,2),
+    #       border_mode='same',
+    #       output_shape=(None, img_shape[0]//(2**1), img_shape[1]//(2**1), num_features),
+    #       activation='relu'))
+    #
+    # model.add(Deconvolution2D(num_classes, nb_row=8, nb_col=8,
+    #       subsample=(2,2),
+    #       border_mode='same',
+    #       output_shape=(None, img_shape[0], img_shape[1], num_classes),
+    #       activation='relu'))
     
     print("nclass", num_classes)
     model.add(Reshape((800*600, num_classes)))
 #     prediction layer
     model.add(Activation("softmax"))
     
-    model.compile('adam', 'categorical_crossentropy', metrics=['accuracy'], sample_weight_mode="temporal")
+    model.compile('adam', 'categorical_crossentropy', metrics=['categorical_accuracy'], sample_weight_mode="temporal")
     
     return model
 
@@ -177,6 +190,8 @@ def run():
                                 nb_epoch=7,
                                 validation_data=test_gen, 
                                 nb_val_samples = (len(xtest)//batch_size) * batch_size,
+                                nb_worker=2,
+                                nb_val_worker=2,
                                 verbose=1)
         
     model.save("m2")
