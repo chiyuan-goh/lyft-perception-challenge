@@ -5,3 +5,5 @@ experiment,results,commit,actual,,,,
 4 layer segnet 7 epoch /255 - .5 add 1 reflect a-axis cls weights, ~0.9191,3228eae88,58.6642,0.6195,0.3485,0.8906,6.711
  7 ? epoch 10,~0.986,,60.5832,0.6409,0.3231,0.9587,6.493
 4 layer segnet 10 epoch /255 - .5 add 1 reflect a-axis cls weights deconv 2 upsampling,?,ebda98ba,66.7468,0.7017,0.4475,0.9558,6.578
+4 layer segnet 10 epoch /255  add 100% reflect a-axis cls weights upsampling,,,68.1666,0.7445,0.5743,0.9146,3.717
+"4 layer segnet 10 epoch /255  add 100% reflect a-axis cls weights(.25,2,5)  deconv",loss: 0.0332 - categorical_accuracy: 0.9826 - val_loss: 0.0664 - val_categorical_accuracy: 0.9825,a7cef22d9a069,71.2987,0.7574,0.5716,0.9432,5.555
