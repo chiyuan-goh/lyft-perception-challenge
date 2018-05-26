@@ -10,6 +10,7 @@ from keras.layers.normalization import BatchNormalization
 from keras.layers import Activation
 from keras.activations import softmax
 from keras.layers.core import Reshape
+from keras.applications.vgg16 import VGG16
 
 from sklearn.utils import shuffle
 from sklearn.model_selection import train_test_split
@@ -97,6 +98,49 @@ def generate_samples(xpaths, ypaths, batch_size, train=False):
                 yield xdata, ydata
             else:
                 yield xdata, ydata, np.array(sample_weights)
+
+
+def vgg_segnet(nclass, img_shape):
+    base_model  = VGG16(include_top=False, weights='imagenet', input_shape=img_shape)
+
+    kernel_size = 3
+
+    upsample_filters = [512, 512, 256, 128, nclass]
+
+    model = Sequential()
+    model.add(base_model)
+
+    for i in range(4):
+        model.add(UpSampling2D(size=(2,2)))
+        model.add(Conv2D(upsample_filters[i], nb_row=kernel_size, nb_col=kernel_size, subsample=(1,1), border_mode='same'))
+        model.add(BatchNormalization())
+        model.add(Activation('relu'))
+        model.add(Conv2D(upsample_filters[i], nb_row=kernel_size, nb_col=kernel_size, subsample=(1,1), border_mode='same'))
+        model.add(BatchNormalization())
+        model.add(Activation('relu'))
+        model.add(Conv2D(upsample_filters[i], nb_row=kernel_size, nb_col=kernel_size, subsample=(1,1), border_mode='same'))
+        model.add(BatchNormalization())
+        model.add(Activation('relu'))
+
+    model.add(UpSampling2D(size=(2, 2)))
+    model.add(Conv2D(upsample_filters[-1], nb_row=kernel_size, nb_col=kernel_size, subsample=(1, 1), border_mode='same'))
+    model.add(BatchNormalization())
+    model.add(Activation('relu'))
+    model.add(Conv2D(upsample_filters[-1], nb_row=kernel_size, nb_col=kernel_size, subsample=(1, 1), border_mode='same'))
+    model.add(BatchNormalization())
+    model.add(Activation('relu'))
+    model.add(Conv2D(upsample_filters[-1], nb_row=kernel_size, nb_col=kernel_size, subsample=(1, 1), border_mode='same'))
+    model.add(BatchNormalization())
+    model.add(Activation('relu'))
+
+
+    model.add(Reshape((img_shape[0]*img_shape[1], nclass)))
+    model.add(Activation("softmax"))
+
+    model.compile('adam', 'categorical_crossentropy', metrics=['categorical_accuracy'], sample_weight_mode="temporal")
+
+    return model
+
 
 
 def segnet(num_classes, img_shape):
