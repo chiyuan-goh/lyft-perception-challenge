@@ -9,3 +9,7 @@ experiment,results,commit,actual,,,,
 "4 layer segnet 12 epoch /255  add 100% reflect a-axis cls weights(.25,2,5)  deconv",loss: 0.0332 - categorical_accuracy: 0.9826 - val_loss: 0.0664 - val_categorical_accuracy: 0.9825,a7cef22d9a069,71.2987,0.7574,0.5716,0.9432,5.555
 vgg13 train for 12 epoch 256/256 input size to network. Upsample convolution. Use with hood mask and cls weights. Adam,"Epoch 12/12
 1600/1600 [==============================] - 175s - loss: 0.0573 - categorical_accuracy: 0.9730 - val_loss: 0.0732 - val_categorical_accuracy: 0.9807",a14a62cdfd52,76.6155,0.791,0.6242,0.9578,7.518
+vgg13 train for 12 epoch leawrning rate of 0.01 and momentum 0.9,"Epoch 12/13
+2000/2000 [==============================] - 201s - loss: 0.0190 - categorical_accuracy: 0.9928   
+Epoch 13/13
+2000/2000 [==============================] - 201s - loss: 0.0182 - categorical_accuracy: 0.9930  ",5e42176820b9c89a,82.7845,0.8532,0.7265,0.9799,7.462

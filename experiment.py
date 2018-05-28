@@ -11,6 +11,7 @@ from keras.layers import Activation
 from keras.activations import softmax
 from keras.layers.core import Reshape
 from keras.applications.vgg16 import VGG16
+from keras.optimizers import SGD
 
 from sklearn.utils import shuffle
 from sklearn.model_selection import train_test_split
@@ -137,11 +138,11 @@ def vgg_segnet(nclass, img_shape):
     model.add(Reshape((img_shape[0]*img_shape[1], nclass)))
     model.add(Activation("softmax"))
 
-    model.compile('adam', 'categorical_crossentropy', metrics=['categorical_accuracy'], sample_weight_mode="temporal")
+    print("running coinsatnt")
+    sgd = SGD(lr=0.01, momentum=0.9, decay=0.)
+    model.compile(sgd, 'categorical_crossentropy', metrics=['categorical_accuracy'], sample_weight_mode="temporal")
 
     return model
-
-
 
 def segnet(num_classes, img_shape):
     model = Sequential()
