@@ -13,3 +13,13 @@ vgg13 train for 12 epoch leawrning rate of 0.01 and momentum 0.9,"Epoch 12/13
 2000/2000 [==============================] - 201s - loss: 0.0190 - categorical_accuracy: 0.9928   
 Epoch 13/13
 2000/2000 [==============================] - 201s - loss: 0.0182 - categorical_accuracy: 0.9930  ",5e42176820b9c89a,82.7845,0.8532,0.7265,0.9799,7.462
+vgg13 train for 13 epoch leawrning rate of 0.01 and momentum 0.9 concat feature from encoder (incomplete  implementation see code),"Epoch 9/13
+2000/2000 [==============================] - 191s - loss: 0.0156 - categorical_accuracy: 0.9955   
+Epoch 10/13
+2000/2000 [==============================] - 191s - loss: 0.0149 - categorical_accuracy: 0.9956   
+Epoch 11/13
+2000/2000 [==============================] - 192s - loss: 0.0143 - categorical_accuracy: 0.9958   
+Epoch 12/13
+2000/2000 [==============================] - 192s - loss: 0.0137 - categorical_accuracy: 0.9960   
+Epoch 13/13
+2000/2000 [==============================] - 193s - loss: 0.0132 - categorical_accuracy: 0.9960 ",e74a01cf6f0f99b3,84.9222,0.8705,0.7584,0.9826,7.874

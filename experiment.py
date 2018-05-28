@@ -1,13 +1,15 @@
 import numpy as np
 import cv2 
 import os
+import tensorflow as tf
+tf.concat_v2 = tf.concat
 import matplotlib.pyplot as plt
 
-from keras.models import Sequential, load_model
+from keras.models import Sequential, load_model, Model
 from keras.layers.convolutional import Conv2D, Deconvolution2D, UpSampling2D, ZeroPadding2D, Cropping2D
 from keras.layers.pooling import MaxPooling2D
 from keras.layers.normalization import BatchNormalization
-from keras.layers import Activation
+from keras.layers import Activation, merge, Input
 from keras.activations import softmax
 from keras.layers.core import Reshape
 from keras.applications.vgg16 import VGG16
@@ -47,7 +49,7 @@ def process_label(yimg):
     weights[label_ch == 10] = 5.
     weights[label_ch == 7] = 2.
     weights[(label_ch != 10) & (label_ch != 7)] = .25
-        
+
     return cls_img, weights
 
 def generate_samples(xpaths, ypaths, batch_size, train=False):
@@ -60,13 +62,13 @@ def generate_samples(xpaths, ypaths, batch_size, train=False):
     while 1:
         xpaths, ypaths = shuffle(xpaths, ypaths)
         nbatches =  len(xpaths) // batch_size
-        
+
         for i in range(nbatches):
             sample_weights = []
-            
+
             xs = xpaths[i * batch_size: i*batch_size + batch_size]
             ys = ypaths[i * batch_size: i*batch_size + batch_size]
-            
+
             xdata = []
             ydata = []
             for n in range(len(xs)):
@@ -75,7 +77,7 @@ def generate_samples(xpaths, ypaths, batch_size, train=False):
 
                 ximg[hood_pixels_gl[0],hood_pixels_gl[1], :] = 0.
                 hot_label, weight = process_label(yimg)
-                
+
                 ydata.append(hot_label)
                 xdata.append(ximg)
                 sample_weights.append(weight)
@@ -100,6 +102,79 @@ def generate_samples(xpaths, ypaths, batch_size, train=False):
             else:
                 yield xdata, ydata, np.array(sample_weights)
 
+def vgg_segnet_concat(nclass, img_shape):
+    base_model = VGG16(include_top=False, weights='imagenet', input_shape=img_shape)
+    vgg_l = base_model.layers
+
+    kernel_size = 3
+
+    upsample_filters = [512, 512, 256, 128, nclass]
+    merge_indices = list(reversed([2, 5, 9, 13, 17]) )
+
+    model = Sequential()
+    model.add(base_model)
+
+    # import pdb
+    # pdb.set_trace()
+
+    l = vgg_l[-1].output
+
+    for i in range(4):
+        us = UpSampling2D(size=(2, 2))(l)
+        m_layer = merge([us, vgg_l[merge_indices[i]].output], mode='concat', concat_axis=-1)
+        l = Conv2D(upsample_filters[i], nb_row=kernel_size, nb_col=kernel_size, subsample=(1, 1), border_mode='same')(m_layer)
+        l = BatchNormalization()(l)
+        l = Conv2D(upsample_filters[i], nb_row=kernel_size, nb_col=kernel_size, subsample=(1, 1), border_mode='same')(l)
+        l= Activation('relu')(l)
+
+        # model.add(UpSampling2D(size=(2,2)))
+        # model.add(Conv2D(upsample_filters[i], nb_row=kernel_size, nb_col=kernel_size, subsample=(1,1), border_mode='same'))
+        # model.add(BatchNormalization())
+        # model.add(Activation('relu'))
+        # model.add(Conv2D(upsample_filters[i], nb_row=kernel_size, nb_col=kernel_size, subsample=(1,1), border_mode='same'))
+        # model.add(BatchNormalization())
+        # model.add(Activation('relu'))
+        # model.add(Conv2D(upsample_filters[i], nb_row=kernel_size, nb_col=kernel_size, subsample=(1,1), border_mode='same'))
+        # model.add(BatchNormalization())
+        # model.add(Activation('relu'))
+
+    us = UpSampling2D(size=(2, 2))(l)
+    m_layer = merge([us, vgg_l[merge_indices[-1]].output], mode='concat', concat_axis=-1)
+    l = Conv2D(upsample_filters[-1], nb_row=kernel_size, nb_col=kernel_size, subsample=(1, 1), border_mode='same')(m_layer)
+    l = BatchNormalization()(l)
+    l = Activation('relu')(l)
+    l = Conv2D(upsample_filters[-1], nb_row=kernel_size, nb_col=kernel_size, subsample=(1, 1), border_mode='same')(l)
+    l = BatchNormalization()(l)
+    l = Activation('relu')(l)
+    l = Conv2D(upsample_filters[-1], nb_row=kernel_size, nb_col=kernel_size, subsample=(1, 1), border_mode='same')(l)
+    l = BatchNormalization()(l)
+    l = Activation('relu')(l)
+
+    # model.add(UpSampling2D(size=(2, 2)))
+    # model.add(Conv2D(upsample_filters[-1], nb_row=kernel_size, nb_col=kernel_size, subsample=(1, 1), border_mode='same'))
+    # model.add(BatchNormalization())
+    # model.add(Activation('relu'))
+    # model.add(Conv2D(upsample_filters[-1], nb_row=kernel_size, nb_col=kernel_size, subsample=(1, 1), border_mode='same'))
+    # model.add(BatchNormalization())
+    # model.add(Activation('relu'))
+    # model.add(Conv2D(upsample_filters[-1], nb_row=kernel_size, nb_col=kernel_size, subsample=(1, 1), border_mode='same'))
+    # model.add(BatchNormalization())
+    # model.add(Activation('relu'))
+
+
+    l = Reshape((img_shape[0]*img_shape[1], nclass))(l)
+    l = Activation("softmax")(l)
+
+    model = Model(input=vgg_l[0].output, output=l)
+
+    # print("running coinsatnt")
+    sgd = SGD(lr=0.01, momentum=0.9, decay=0.)
+    model.compile(sgd, 'categorical_crossentropy', metrics=['categorical_accuracy'], sample_weight_mode="temporal")
+
+    # return model
+
+
+    return model
 
 def vgg_segnet(nclass, img_shape):
     base_model  = VGG16(include_top=False, weights='imagenet', input_shape=img_shape)
@@ -147,7 +222,7 @@ def vgg_segnet(nclass, img_shape):
 def segnet(num_classes, img_shape):
     model = Sequential()
     num_features = 64
-    
+
     #cropping and pre-process
     #model.add()
     #model.add()
@@ -159,17 +234,17 @@ def segnet(num_classes, img_shape):
     model.add(BatchNormalization())
     model.add(Activation('relu'))
     model.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2), border_mode='same'))
-    
+
     model.add(Conv2D(num_features, nb_row=7, nb_col=7, subsample=(1,1), border_mode='same'))
     model.add(BatchNormalization())
     model.add(Activation('relu'))
     model.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2), border_mode='same'))
-    
+
     model.add(Conv2D(num_features, nb_row=7, nb_col=7, subsample=(1,1),  border_mode='same'))
     model.add(BatchNormalization())
     model.add(Activation('relu'))
     model.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2), border_mode='same'))
-    
+
     model.add(Conv2D(num_features, nb_row=7, nb_col=7, subsample=(1,1),  border_mode='same'))
     model.add(BatchNormalization())
     model.add(Activation('relu'))
@@ -228,13 +303,13 @@ def segnet(num_classes, img_shape):
           output_shape=(None, img_shape[0], img_shape[1], num_classes)))
     model.add(BatchNormalization())
     model.add(Activation('relu'))
-    
+
     model.add(Reshape((800*600, num_classes)))
 #     prediction layer
     model.add(Activation("softmax"))
-    
+
     model.compile('adam', 'categorical_crossentropy', metrics=['categorical_accuracy'], sample_weight_mode="temporal")
-    
+
     return model
 
 # def run():
@@ -261,6 +336,9 @@ def segnet(num_classes, img_shape):
 #                                 verbose=1)
 #
 #     model.save("m2")
-    
+
 if __name__ == '__main__':
-    run()
+    m = vgg_segnet_concat(3, (256,256,3))
+    print(m.summary())
+    #from keras.utils.visualize_util import plot
+    #plot(m, '/home/cy/Desktop/graph.png')
