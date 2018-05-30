@@ -46,7 +46,8 @@ def process_label(yimg):
     cls_img[:,:, 2] = (label_ch != 10) & (label_ch != 7)
 
     weights = np.zeros_like(label_ch, dtype='float')
-    weights[label_ch == 10] = 5.
+    # weights[label_ch == 10] = 5.
+    weights[label_ch == 10] = 10.
     weights[label_ch == 7] = 2.
     weights[(label_ch != 10) & (label_ch != 7)] = .25
 
@@ -124,7 +125,12 @@ def vgg_segnet_concat(nclass, img_shape):
         m_layer = merge([us, vgg_l[merge_indices[i]].output], mode='concat', concat_axis=-1)
         l = Conv2D(upsample_filters[i], nb_row=kernel_size, nb_col=kernel_size, subsample=(1, 1), border_mode='same')(m_layer)
         l = BatchNormalization()(l)
+        l= Activation('relu')(l)
         l = Conv2D(upsample_filters[i], nb_row=kernel_size, nb_col=kernel_size, subsample=(1, 1), border_mode='same')(l)
+        l = BatchNormalization()(l)
+        l= Activation('relu')(l)
+        l = Conv2D(upsample_filters[i], nb_row=kernel_size, nb_col=kernel_size, subsample=(1, 1), border_mode='same')(l)
+        l = BatchNormalization()(l)
         l= Activation('relu')(l)
 
         # model.add(UpSampling2D(size=(2,2)))
@@ -146,9 +152,9 @@ def vgg_segnet_concat(nclass, img_shape):
     l = Conv2D(upsample_filters[-1], nb_row=kernel_size, nb_col=kernel_size, subsample=(1, 1), border_mode='same')(l)
     l = BatchNormalization()(l)
     l = Activation('relu')(l)
-    l = Conv2D(upsample_filters[-1], nb_row=kernel_size, nb_col=kernel_size, subsample=(1, 1), border_mode='same')(l)
-    l = BatchNormalization()(l)
-    l = Activation('relu')(l)
+    # l = Conv2D(upsample_filters[-1], nb_row=kernel_size, nb_col=kernel_size, subsample=(1, 1), border_mode='same')(l)
+    # l = BatchNormalization()(l)
+    # l = Activation('relu')(l)
 
     # model.add(UpSampling2D(size=(2, 2)))
     # model.add(Conv2D(upsample_filters[-1], nb_row=kernel_size, nb_col=kernel_size, subsample=(1, 1), border_mode='same'))
